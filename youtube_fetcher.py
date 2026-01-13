@@ -171,21 +171,21 @@ from googleapiclient.discovery import build
 import sqlite3
 import time
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+# 🔐 API KEY (Render uniquement via Environment Variables)
+API_KEY = os.environ.get("YOUTUBE_API_KEY")
 
-# 🔐 API KEY (Render + Local)
-API_KEY = os.getenv("AIzaSyDIIf6FTyXT0pno7ErMrT0ZtUc2862ZBp4")
+if not API_KEY:
+    raise RuntimeError("❌ YOUTUBE_API_KEY non définie dans les variables d'environnement")
 
-# 📦 Base de données (Render compatible)
+# 📦 Base de données (compatible Render)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "data", "aes.db")
 
 youtube = build("youtube", "v3", developerKey=API_KEY)
 
 
-# 🔁 Convertir durée ISO 8601 → lisible
+# 🔁 Convertir durée ISO 8601 → lisible (ex: 5:32)
 def parse_duration(duration):
     duration = duration.replace("PT", "")
     minutes = seconds = 0
@@ -200,16 +200,15 @@ def parse_duration(duration):
     return f"{minutes}:{str(seconds).zfill(2)}"
 
 
-def fetch_videos(query, country, max_results=15):
+def fetch_videos(query, country, max_results=10):
     try:
-        search_request = youtube.search().list(
+        search_response = youtube.search().list(
             q=query,
             part="snippet",
             type="video",
             maxResults=max_results,
             order="date"
-        )
-        search_response = search_request.execute()
+        ).execute()
     except Exception as e:
         print(f"❌ Erreur recherche YouTube : {e}")
         return
@@ -222,26 +221,24 @@ def fetch_videos(query, country, max_results=15):
             video_id = item["id"]["videoId"]
             snippet = item["snippet"]
 
-            # 🎥 Infos vidéo
-            video_request = youtube.videos().list(
+            video_response = youtube.videos().list(
                 part="statistics,contentDetails",
                 id=video_id
-            )
-            video_response = video_request.execute()
+            ).execute()
 
             if not video_response["items"]:
                 continue
 
-            stats = video_response["items"][0]
-            views = int(stats["statistics"].get("viewCount", 0))
-            duration = parse_duration(stats["contentDetails"]["duration"])
+            video_data = video_response["items"][0]
 
-            # 📺 Logo chaîne
-            channel_request = youtube.channels().list(
+            views = int(video_data["statistics"].get("viewCount", 0))
+            duration = parse_duration(video_data["contentDetails"]["duration"])
+
+            channel_response = youtube.channels().list(
                 part="snippet",
                 id=snippet["channelId"]
-            )
-            channel_response = channel_request.execute()
+            ).execute()
+
             channel_logo = channel_response["items"][0]["snippet"]["thumbnails"]["default"]["url"]
 
             cursor.execute("""
@@ -266,7 +263,6 @@ def fetch_videos(query, country, max_results=15):
 
         except Exception as e:
             print(f"⚠️ Vidéo ignorée : {e}")
-            continue
 
     conn.commit()
     conn.close()
@@ -285,9 +281,10 @@ def fetch_all():
     ]
 
     for country, query in queries:
-        fetch_videos(query, country, max_results=10)
-        time.sleep(1)  # éviter quota
+        fetch_videos(query, country)
+        time.sleep(1)
 
     print("✅ Vidéos YouTube mises à jour")
+
 
 
