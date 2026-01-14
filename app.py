@@ -127,7 +127,7 @@ from youtube_fetcher import fetch_all
 app = Flask(__name__)
 CORS(app)
 
-# 📦 Base de données
+# 📦 Base de données (Render + local)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "data", "aes.db")
 
@@ -136,19 +136,30 @@ def get_db():
     return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 
+# 🩺 HEALTH CHECK (Render)
 @app.route("/")
 def health():
     return jsonify({"status": "ok"})
 
 
-# 🔄 ROUTE DE MISE À JOUR (clé de la solution 5)
-@app.route("/refresh", methods=["POST"])
+# 🔄 REFRESH MANUEL (solution 5)
+# 👉 Autoriser GET aussi pour test navigateur
+@app.route("/refresh", methods=["GET", "POST"])
 def refresh_videos():
-    fetch_all()
-    return jsonify({"message": "✅ Vidéos mises à jour"})
+    try:
+        fetch_all()
+        return jsonify({
+            "status": "success",
+            "message": "✅ Vidéos mises à jour"
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 
-# 📺 ROUTE PRINCIPALE CONSOMMÉE PAR FLUTTER
+# 📺 API PRINCIPALE POUR FLUTTER
 @app.route("/videos")
 def get_videos():
     conn = get_db()
@@ -166,7 +177,7 @@ def get_videos():
     rows = cursor.fetchall()
     conn.close()
 
-    videos = [
+    return jsonify([
         {
             "id": r[0],
             "video_id": r[1],
@@ -181,9 +192,8 @@ def get_videos():
             "platform": r[10],
         }
         for r in rows
-    ]
+    ])
 
-    return jsonify(videos)
 
 
 
