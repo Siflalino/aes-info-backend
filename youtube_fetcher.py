@@ -172,20 +172,16 @@ import sqlite3
 import time
 import os
 
-# 🔐 API KEY (Render uniquement via Environment Variables)
 API_KEY = os.environ.get("YOUTUBE_API_KEY")
-
 if not API_KEY:
-    raise RuntimeError("❌ YOUTUBE_API_KEY non définie dans les variables d'environnement")
+    raise RuntimeError("❌ YOUTUBE_API_KEY manquante")
 
-# 📦 Base de données (compatible Render)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "data", "aes.db")
 
 youtube = build("youtube", "v3", developerKey=API_KEY)
 
 
-# 🔁 Convertir durée ISO 8601 → lisible (ex: 5:32)
 def parse_duration(duration):
     duration = duration.replace("PT", "")
     minutes = seconds = 0
@@ -200,9 +196,17 @@ def parse_duration(duration):
     return f"{minutes}:{str(seconds).zfill(2)}"
 
 
+def video_exists(cursor, video_id):
+    cursor.execute(
+        "SELECT 1 FROM videos WHERE video_id = ? LIMIT 1",
+        (video_id,)
+    )
+    return cursor.fetchone() is not None
+
+
 def fetch_videos(query, country, max_results=10):
     try:
-        search_response = youtube.search().list(
+        response = youtube.search().list(
             q=query,
             part="snippet",
             type="video",
@@ -210,44 +214,45 @@ def fetch_videos(query, country, max_results=10):
             order="date"
         ).execute()
     except Exception as e:
-        print(f"❌ Erreur recherche YouTube : {e}")
+        print(f"❌ Recherche YouTube échouée : {e}")
         return
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    for item in search_response.get("items", []):
+    added = 0
+
+    for item in response.get("items", []):
         try:
             video_id = item["id"]["videoId"]
-            snippet = item["snippet"]
 
-            video_response = youtube.videos().list(
-                part="statistics,contentDetails",
-                id=video_id
-            ).execute()
-
-            if not video_response["items"]:
+            # 🔥 NE PAS IGNORER SILENCIEUSEMENT
+            if video_exists(cursor, video_id):
                 continue
 
-            video_data = video_response["items"][0]
+            snippet = item["snippet"]
+
+            video_data = youtube.videos().list(
+                part="statistics,contentDetails",
+                id=video_id
+            ).execute()["items"][0]
 
             views = int(video_data["statistics"].get("viewCount", 0))
             duration = parse_duration(video_data["contentDetails"]["duration"])
 
-            channel_response = youtube.channels().list(
+            channel_data = youtube.channels().list(
                 part="snippet",
                 id=snippet["channelId"]
-            ).execute()
+            ).execute()["items"][0]
 
-            channel_logo = channel_response["items"][0]["snippet"]["thumbnails"]["default"]["url"]
+            channel_logo = channel_data["snippet"]["thumbnails"]["default"]["url"]
 
             cursor.execute("""
-                INSERT OR IGNORE INTO videos (
+                INSERT INTO videos (
                     video_id, title, description, channel,
                     channel_logo, views, duration,
                     published_at, country, platform
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 video_id,
                 snippet["title"],
@@ -261,14 +266,17 @@ def fetch_videos(query, country, max_results=10):
                 "YouTube"
             ))
 
+            added += 1
+
         except Exception as e:
             print(f"⚠️ Vidéo ignorée : {e}")
 
     conn.commit()
     conn.close()
 
+    print(f"✅ {added} nouvelles vidéos ajoutées pour {country}")
 
-# 🔥 FONCTION PRINCIPALE
+
 def fetch_all():
     queries = [
         ("Burkina Faso", "RTB Burkina Faso actualité"),
@@ -284,7 +292,8 @@ def fetch_all():
         fetch_videos(query, country)
         time.sleep(1)
 
-    print("✅ Vidéos YouTube mises à jour")
+    print("🚀 Mise à jour YouTube terminée")
+
 
 
 

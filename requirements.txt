@@ -3,4 +3,4 @@ gunicorn
 APScheduler
 flask-cors
 google-api-python-client
-schedule
+python-dotenv

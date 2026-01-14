@@ -120,45 +120,57 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 import sqlite3
+import os
+
 from scheduler import start_scheduler
 
 app = Flask(__name__)
 CORS(app)
 
-DB_PATH = "data/aes.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "data", "aes.db")
 
-# 🔥 DÉMARRER LE SCHEDULER AU DÉMARRAGE DU SERVEUR
-start_scheduler()
+
+def get_db():
+    return sqlite3.connect(DB_PATH)
+
 
 @app.route("/videos")
 def get_videos():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT id, video_id, title, description, channel,
-           channel_logo, views, duration,
-           published_at, country, platform
-    FROM videos
-    ORDER BY published_at DESC
+        SELECT id, video_id, title, description, channel,
+               channel_logo, views, duration,
+               published_at, country, platform
+        FROM videos
+        ORDER BY datetime(published_at) DESC
     """)
 
     rows = cursor.fetchall()
     conn.close()
 
-    videos = [{
-        "id": r[0],
-        "video_id": r[1],
-        "title": r[2],
-        "description": r[3],
-        "channel": r[4],
-        "channel_logo": r[5],
-        "views": r[6],
-        "duration": r[7],
-        "published_at": r[8],
-        "country": r[9],
-        "platform": r[10],
-    } for r in rows]
+    return jsonify([
+        {
+            "id": r[0],
+            "video_id": r[1],
+            "title": r[2],
+            "description": r[3],
+            "channel": r[4],
+            "channel_logo": r[5],
+            "views": r[6],
+            "duration": r[7],
+            "published_at": r[8],
+            "country": r[9],
+            "platform": r[10],
+        }
+        for r in rows
+    ])
 
-    return jsonify(videos)
+
+# 🔥 DÉMARRER LE SCHEDULER UNE SEULE FOIS
+if os.environ.get("RENDER"):
+    start_scheduler()
+
 
