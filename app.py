@@ -123,6 +123,7 @@ import sqlite3
 import os
 
 from youtube_fetcher import fetch_all
+from database import init_db   # 🔥 IMPORTANT
 
 app = Flask(__name__)
 CORS(app)
@@ -136,14 +137,23 @@ def get_db():
     return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 
+# 🔥 INITIALISATION AU DÉMARRAGE
+init_db()
+
+try:
+    fetch_all()
+    print("✅ Vidéos chargées au démarrage")
+except Exception as e:
+    print("⚠️ Erreur fetch initial :", e)
+
+
 # 🩺 HEALTH CHECK (Render)
 @app.route("/")
 def health():
     return jsonify({"status": "ok"})
 
 
-# 🔄 REFRESH MANUEL (solution 5)
-# 👉 Autoriser GET aussi pour test navigateur
+# 🔄 REFRESH MANUEL (test navigateur / postman)
 @app.route("/refresh", methods=["GET", "POST"])
 def refresh_videos():
     try:
@@ -164,6 +174,16 @@ def refresh_videos():
 def get_videos():
     conn = get_db()
     cursor = conn.cursor()
+
+    # 🔥 Vérifier si la DB est vide
+    cursor.execute("SELECT COUNT(*) FROM videos")
+    count = cursor.fetchone()[0]
+
+    if count == 0:
+        try:
+            fetch_all()
+        except Exception as e:
+            print("⚠️ Fetch auto échoué :", e)
 
     cursor.execute("""
         SELECT id, video_id, title, description, channel,
@@ -193,6 +213,7 @@ def get_videos():
         }
         for r in rows
     ])
+
 
 
 
