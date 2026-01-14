@@ -122,19 +122,33 @@ from flask_cors import CORS
 import sqlite3
 import os
 
-from scheduler import start_scheduler
+from youtube_fetcher import fetch_all
 
 app = Flask(__name__)
 CORS(app)
 
+# 📦 Base de données
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "data", "aes.db")
 
 
 def get_db():
-    return sqlite3.connect(DB_PATH)
+    return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 
+@app.route("/")
+def health():
+    return jsonify({"status": "ok"})
+
+
+# 🔄 ROUTE DE MISE À JOUR (clé de la solution 5)
+@app.route("/refresh", methods=["POST"])
+def refresh_videos():
+    fetch_all()
+    return jsonify({"message": "✅ Vidéos mises à jour"})
+
+
+# 📺 ROUTE PRINCIPALE CONSOMMÉE PAR FLUTTER
 @app.route("/videos")
 def get_videos():
     conn = get_db()
@@ -146,12 +160,13 @@ def get_videos():
                published_at, country, platform
         FROM videos
         ORDER BY datetime(published_at) DESC
+        LIMIT 100
     """)
 
     rows = cursor.fetchall()
     conn.close()
 
-    return jsonify([
+    videos = [
         {
             "id": r[0],
             "video_id": r[1],
@@ -166,11 +181,9 @@ def get_videos():
             "platform": r[10],
         }
         for r in rows
-    ])
+    ]
 
+    return jsonify(videos)
 
-# 🔥 DÉMARRER LE SCHEDULER UNE SEULE FOIS
-if os.environ.get("RENDER"):
-    start_scheduler()
 
 

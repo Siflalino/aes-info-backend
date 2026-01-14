@@ -1,3 +1,5 @@
-# SQLite database
+# SQLite
+data/aes.db
 data/*.db
 data/*.db-journal
+
