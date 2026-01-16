@@ -171,6 +171,7 @@ from googleapiclient.discovery import build
 import sqlite3
 import time
 import os
+import re
 
 # 🔐 API KEY (Render)
 API_KEY = os.environ.get("YOUTUBE_API_KEY")
@@ -186,17 +187,26 @@ youtube = build("youtube", "v3", developerKey=API_KEY)
 
 # ⏱️ Convertir durée ISO 8601 → mm:ss
 def parse_duration(duration):
-    duration = duration.replace("PT", "")
-    minutes = seconds = 0
+    """
+    Convertit une durée ISO 8601 (PT1H31M20S) en secondes
+    """
+    if not duration:
+        return 0
 
-    if "M" in duration:
-        minutes = int(duration.split("M")[0])
-        duration = duration.split("M")[1]
+    hours = minutes = seconds = 0
 
-    if "S" in duration:
-        seconds = int(duration.replace("S", ""))
+    h = re.search(r'(\d+)H', duration)
+    m = re.search(r'(\d+)M', duration)
+    s = re.search(r'(\d+)S', duration)
 
-    return f"{minutes}:{str(seconds).zfill(2)}"
+    if h:
+        hours = int(h.group(1))
+    if m:
+        minutes = int(m.group(1))
+    if s:
+        seconds = int(s.group(1))
+
+    return hours * 3600 + minutes * 60 + seconds
 
 
 def get_connection():
