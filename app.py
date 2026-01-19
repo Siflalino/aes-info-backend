@@ -117,18 +117,117 @@
 #     app.run(host="0.0.0.0", port=5000)
 
 
+# from flask import Flask, jsonify
+# from flask_cors import CORS
+# import sqlite3
+# import os
+
+# from youtube_fetcher import fetch_all
+# from database import init_db   # 🔥 IMPORTANT
+
+# app = Flask(__name__)
+# CORS(app)
+
+# # 📦 Base de données (Render + local)
+# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# DB_PATH = os.path.join(BASE_DIR, "data", "aes.db")
+
+
+# def get_db():
+#     return sqlite3.connect(DB_PATH, check_same_thread=False)
+
+
+# # 🔥 INITIALISATION AU DÉMARRAGE
+# init_db()
+
+# try:
+#     fetch_all()
+#     print("✅ Vidéos chargées au démarrage")
+# except Exception as e:
+#     print("⚠️ Erreur fetch initial :", e)
+
+
+# # 🩺 HEALTH CHECK (Render)
+# @app.route("/")
+# def health():
+#     return jsonify({"status": "ok"})
+
+
+# # 🔄 REFRESH MANUEL (test navigateur / postman)
+# @app.route("/refresh", methods=["GET", "POST"])
+# def refresh_videos():
+#     try:
+#         fetch_all()
+#         return jsonify({
+#             "status": "success",
+#             "message": "✅ Vidéos mises à jour"
+#         })
+#     except Exception as e:
+#         return jsonify({
+#             "status": "error",
+#             "message": str(e)
+#         }), 500
+
+
+# # 📺 API PRINCIPALE POUR FLUTTER
+# @app.route("/videos")
+# def get_videos():
+#     conn = get_db()
+#     cursor = conn.cursor()
+
+#     # 🔥 Vérifier si la DB est vide
+#     cursor.execute("SELECT COUNT(*) FROM videos")
+#     count = cursor.fetchone()[0]
+
+#     if count == 0:
+#         try:
+#             fetch_all()
+#         except Exception as e:
+#             print("⚠️ Fetch auto échoué :", e)
+
+#     cursor.execute("""
+#         SELECT id, video_id, title, description, channel,
+#                channel_logo, views, duration,
+#                published_at, country, platform
+#         FROM videos
+#         ORDER BY datetime(published_at) DESC
+#         LIMIT 100
+#     """)
+
+#     rows = cursor.fetchall()
+#     conn.close()
+
+#     return jsonify([
+#         {
+#             "id": r[0],
+#             "video_id": r[1],
+#             "title": r[2],
+#             "description": r[3],
+#             "channel": r[4],
+#             "channel_logo": r[5],
+#             "views": r[6],
+#             "duration": r[7],
+#             "published_at": r[8],
+#             "country": r[9],
+#             "platform": r[10],
+#         }
+#         for r in rows
+#     ])
+
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 import sqlite3
 import os
+import threading
 
 from youtube_fetcher import fetch_all
-from database import init_db   # 🔥 IMPORTANT
+from database import init_db
 
 app = Flask(__name__)
 CORS(app)
 
-# 📦 Base de données (Render + local)
+# 📦 Base de données
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "data", "aes.db")
 
@@ -137,30 +236,49 @@ def get_db():
     return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 
-# 🔥 INITIALISATION AU DÉMARRAGE
+# 🔥 INIT DB (safe)
 init_db()
 
-try:
-    fetch_all()
-    print("✅ Vidéos chargées au démarrage")
-except Exception as e:
-    print("⚠️ Erreur fetch initial :", e)
+
+# 🔥 FETCH AU DÉMARRAGE (UNE SEULE FOIS)
+def background_fetch():
+    try:
+        print("🚀 Chargement initial des vidéos...")
+        fetch_all()
+        print("✅ Vidéos chargées")
+    except Exception as e:
+        print("⚠️ Erreur fetch initial :", e)
 
 
-# 🩺 HEALTH CHECK (Render)
+@app.before_first_request
+def start_background_job():
+    threading.Thread(target=background_fetch).start()
+
+
+# 🩺 HEALTH CHECK AVEC STATUT DB
 @app.route("/")
+@app.route("/health")
 def health():
-    return jsonify({"status": "ok"})
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM videos")
+    count = cursor.fetchone()[0]
+    conn.close()
+
+    return jsonify({
+        "status": "ok",
+        "videos": count
+    })
 
 
-# 🔄 REFRESH MANUEL (test navigateur / postman)
+# 🔄 REFRESH MANUEL
 @app.route("/refresh", methods=["GET", "POST"])
 def refresh_videos():
     try:
-        fetch_all()
+        threading.Thread(target=fetch_all).start()
         return jsonify({
             "status": "success",
-            "message": "✅ Vidéos mises à jour"
+            "message": "🔄 Mise à jour lancée"
         })
     except Exception as e:
         return jsonify({
@@ -169,21 +287,11 @@ def refresh_videos():
         }), 500
 
 
-# 📺 API PRINCIPALE POUR FLUTTER
+# 📺 API PRINCIPALE
 @app.route("/videos")
 def get_videos():
     conn = get_db()
     cursor = conn.cursor()
-
-    # 🔥 Vérifier si la DB est vide
-    cursor.execute("SELECT COUNT(*) FROM videos")
-    count = cursor.fetchone()[0]
-
-    if count == 0:
-        try:
-            fetch_all()
-        except Exception as e:
-            print("⚠️ Fetch auto échoué :", e)
 
     cursor.execute("""
         SELECT id, video_id, title, description, channel,
@@ -213,6 +321,7 @@ def get_videos():
         }
         for r in rows
     ])
+
 
 
 

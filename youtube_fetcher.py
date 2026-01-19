@@ -184,37 +184,29 @@ DB_PATH = os.path.join(BASE_DIR, "data", "aes.db")
 
 youtube = build("youtube", "v3", developerKey=API_KEY)
 
-
-# ⏱️ Convertir durée ISO 8601 → mm:ss
+# ⏱️ Convertir durée ISO 8601 → secondes
 def parse_duration(duration):
-    """
-    Convertit une durée ISO 8601 (PT1H31M20S) en secondes
-    """
     if not duration:
         return 0
-
-    hours = minutes = seconds = 0
 
     h = re.search(r'(\d+)H', duration)
     m = re.search(r'(\d+)M', duration)
     s = re.search(r'(\d+)S', duration)
 
-    if h:
-        hours = int(h.group(1))
-    if m:
-        minutes = int(m.group(1))
-    if s:
-        seconds = int(s.group(1))
-
-    return hours * 3600 + minutes * 60 + seconds
-
+    return (
+        int(h.group(1)) * 3600 if h else 0
+    ) + (
+        int(m.group(1)) * 60 if m else 0
+    ) + (
+        int(s.group(1)) if s else 0
+    )
 
 def get_connection():
     return sqlite3.connect(DB_PATH, check_same_thread=False)
 
-
-def fetch_videos(query, country, max_results=5):
-    print(f"🔍 Recherche vidéos : {query}")
+# 🔍 Recherche générique
+def fetch_videos(query, country, max_results=15):
+    print(f"🔍 {country} | {query}")
 
     try:
         response = youtube.search().list(
@@ -230,7 +222,6 @@ def fetch_videos(query, country, max_results=5):
 
     conn = get_connection()
     cursor = conn.cursor()
-
     added = 0
 
     for item in response.get("items", []):
@@ -238,7 +229,6 @@ def fetch_videos(query, country, max_results=5):
             video_id = item["id"]["videoId"]
             snippet = item["snippet"]
 
-            # 📊 Détails vidéo
             video_resp = youtube.videos().list(
                 part="statistics,contentDetails",
                 id=video_id
@@ -252,7 +242,6 @@ def fetch_videos(query, country, max_results=5):
             views = int(video_data["statistics"].get("viewCount", 0))
             duration = parse_duration(video_data["contentDetails"]["duration"])
 
-            # 🖼️ Logo chaîne
             channel_resp = youtube.channels().list(
                 part="snippet",
                 id=snippet["channelId"]
@@ -291,25 +280,49 @@ def fetch_videos(query, country, max_results=5):
 
     print(f"✅ {added} nouvelles vidéos ajoutées ({country})")
 
-
+# 🚀 MISE À JOUR GLOBALE
 def fetch_all():
-    print("🔄 Mise à jour globale YouTube démarrée")
+    print("🔄 Mise à jour YouTube globale")
 
-    queries = [
-        ("Burkina Faso", "RTB Burkina Faso actualité"),
-        ("Burkina Faso", "Burkina Faso journal télévisé"),
-        ("Mali", "ORTM Mali actualité"),
-        ("Mali", "Mali journal télévisé"),
-        ("Niger", "Télé Sahel Niger actualité"),
-        ("Niger", "Niger journal télévisé"),
-        ("AES", "Alliance des États du Sahel actualité"),
-    ]
+    SEARCH_CONFIG = {
+        "Burkina Faso": [
+            "RTB Burkina Faso",
+            "Burkina Faso actualité",
+            "Burkina Faso journal télévisé",
+            "IB Traoré discours",
+            "AES Burkina Faso",
+            "politique Burkina Faso",
+        ],
+        "Mali": [
+            "ORTM Mali",
+            "actualité Mali",
+            "journal télévisé Mali",
+            "Assimi Goïta discours",
+            "AES Mali",
+        ],
+        "Niger": [
+            "Télé Sahel Niger",
+            "actualité Niger",
+            "journal télévisé Niger",
+            "Abdourahamane Tiani",
+            "AES Niger",
+        ],
+        "AES": [
+            "Alliance des États du Sahel",
+            "Confédération AES",
+            "sommet AES",
+            "actualité AES",
+            "AES Mali Burkina Niger",
+        ]
+    }
 
-    for country, query in queries:
-        fetch_videos(query, country)
-        time.sleep(1)  # anti quota YouTube
+    for country, queries in SEARCH_CONFIG.items():
+        for query in queries:
+            fetch_videos(query, country)
+            time.sleep(1.2)  # anti quota YouTube
 
     print("🚀 Mise à jour YouTube terminée")
+
 
 
 
