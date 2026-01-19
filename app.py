@@ -250,9 +250,9 @@ def background_fetch():
         print("⚠️ Erreur fetch initial :", e)
 
 
-@app.before_first_request
-def start_background_job():
-    threading.Thread(target=background_fetch).start()
+# 🚀 Lancer le fetch en arrière-plan (non bloquant)
+threading.Thread(target=background_fetch, daemon=True).start()
+
 
 
 # 🩺 HEALTH CHECK AVEC STATUT DB
