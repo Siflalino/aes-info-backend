@@ -3,3 +3,4 @@ data/aes.db
 data/*.db
 data/*.db-journal
 
+__pycache__/
