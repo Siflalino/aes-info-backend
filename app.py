@@ -323,6 +323,84 @@ def get_videos():
     ])
 
 
+# 📝 LETTRE DE MOTIVATION – BOURSE WASCAL MRP-ICC
+@app.route("/lettre-motivation/wascal")
+def lettre_motivation_wascal():
+    lettre = {
+        "programme": "Master Research Programme in Informatics for Climate Change (MRP-ICC)",
+        "institution": "Université Joseph KI-ZERBO, Ouagadougou, Burkina Faso",
+        "session": "2026/2027",
+        "organisme": "West African Science Service Centre on Climate Change and Adapted Land Use (WASCAL)",
+        "titre": "Lettre de Motivation – Bourse WASCAL MRP-ICC 2026/2027",
+        "contenu": (
+            "Objet : Candidature au Master Research Programme in Informatics for Climate Change (MRP-ICC) "
+            "– Session 2026/2027\n\n"
+
+            "Madame, Monsieur,\n\n"
+
+            "C'est avec un grand intérêt et une profonde conviction que je soumets ma candidature au "
+            "Master Research Programme in Informatics for Climate Change (MRP-ICC), organisé par "
+            "l'Université Joseph KI-ZERBO de Ouagadougou, Burkina Faso, dans le cadre du programme "
+            "de renforcement des capacités du West African Science Service Centre on Climate Change "
+            "and Adapted Land Use (WASCAL), avec le soutien du Ministère Fédéral Allemand de la "
+            "Recherche, de la Technologie et de l'Espace (BMFTR).\n\n"
+
+            "Titulaire d'un diplôme de licence (BSc) en Informatique avec mention, j'ai acquis de "
+            "solides compétences en programmation, en gestion de bases de données, en systèmes "
+            "d'information et en analyse de données. Mon parcours académique m'a permis de développer "
+            "une maîtrise des outils informatiques avancés ainsi qu'une rigueur méthodologique "
+            "indispensable à la conduite de travaux de recherche scientifique.\n\n"
+
+            "La problématique du changement climatique constitue l'un des défis majeurs de notre époque, "
+            "en particulier pour les pays d'Afrique de l'Ouest. Face à la récurrence des phénomènes "
+            "météorologiques extrêmes, à la dégradation des terres et à la pression croissante sur les "
+            "ressources naturelles, il m'est apparu indispensable d'orienter mes compétences "
+            "informatiques vers des applications directement utiles à nos populations. C'est ce qui "
+            "motive profondément mon souhait d'intégrer ce programme unique, qui associe l'informatique "
+            "avancée aux sciences climatiques.\n\n"
+
+            "Le MRP-ICC représente pour moi une opportunité exceptionnelle de me spécialiser dans la "
+            "gestion et l'analyse des données climatiques, l'exploitation de systèmes de calcul haute "
+            "performance (HPC) et la mise en œuvre de modèles climatiques régionaux. Ces compétences "
+            "sont essentielles pour doter l'Afrique de l'Ouest d'une expertise locale capable de "
+            "produire des informations climatiques fiables à l'intention des décideurs, des agences "
+            "météorologiques nationales et des communautés vulnérables. Je suis particulièrement "
+            "attiré par la dimension interdisciplinaire et transdisciplinaire du programme, qui permet "
+            "d'aborder les enjeux climatiques dans toute leur complexité.\n\n"
+
+            "Par ailleurs, mon intérêt pour les logiciels d'analyse climatique open source ainsi que "
+            "pour l'administration et la maintenance des infrastructures informatiques m'a conduit à "
+            "me former de manière autonome sur plusieurs outils pertinents pour ce programme. "
+            "Cette curiosité intellectuelle et ma capacité à apprendre en autonomie me permettront "
+            "de tirer le meilleur parti des enseignements dispensés à l'Université Joseph KI-ZERBO.\n\n"
+
+            "À l'issue de ce master, mon ambition est de contribuer activement au développement des "
+            "services climatiques dans mon pays et dans la sous-région ouest-africaine, que ce soit "
+            "au sein des agences météorologiques nationales, des centres de recherche, des universités "
+            "ou des institutions internationales travaillant sur l'adaptation au changement climatique. "
+            "Je suis également ouvert à la poursuite en doctorat afin d'approfondir mes travaux de "
+            "recherche dans ce domaine stratégique.\n\n"
+
+            "Convaincu que WASCAL, avec ses ressources scientifiques et son réseau régional d'excellence, "
+            "est le cadre idéal pour développer cette expertise, je m'engage à m'investir pleinement "
+            "dans le programme, à respecter l'ensemble des exigences académiques et à mettre en valeur "
+            "les connaissances acquises au service du développement durable de l'Afrique de l'Ouest.\n\n"
+
+            "Je reste à votre entière disposition pour tout entretien ou complément d'information "
+            "que vous jugerez nécessaire.\n\n"
+
+            "Dans l'espoir que ma candidature retiendra votre attention, je vous prie d'agréer, "
+            "Madame, Monsieur, l'expression de ma haute considération.\n\n"
+
+            "[Prénom NOM]\n"
+            "[Date]\n"
+            "[Adresse – Ville, Pays]\n"
+            "[Email] | [Téléphone / WhatsApp]"
+        )
+    }
+    return jsonify(lettre)
+
+
 
 
 
